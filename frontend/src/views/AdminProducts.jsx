@@ -9,6 +9,7 @@ import AdminBudgetModal from "../components/admin/AdminBudgetModal.jsx";
 import {
     CATEGORY_ID_TO_NAME as ID_TO_CATEGORY_NAME,
     getDisplayCategoryName,
+    getNormalizedCategoryId,
     mapCategoryIdFromName,
     PERFUME_CATEGORY_DEFINITIONS,
 } from "../utils/perfumeCategories.js";
@@ -411,6 +412,11 @@ const isParentCategoryId = (categoryId) => {
     const category = PERFUME_CATEGORY_DEFINITIONS.find((item) => Number(item.id) === Number(categoryId));
     return Boolean(category?.children?.length);
 };
+
+const getCategoryAndDescendantIds = (category) => [
+    Number(category.id),
+    ...(category.children || []).flatMap(getCategoryAndDescendantIds),
+];
 
 const parentCategoryNames = PERFUME_CATEGORY_DEFINITIONS
     .filter((category) => category.children?.length > 0)
@@ -1250,6 +1256,13 @@ export default function AdminProducts() {
 
     const selectedBudgetCount = selectedBudgetItems.length;
 
+    const selectedCategoryDefinition = categories.find(
+        (category) => normalizeCategoryLabel(category.name) === normalizeCategoryLabel(selectedCategory)
+    );
+    const selectedCategoryIds = selectedCategoryDefinition
+        ? new Set(getCategoryAndDescendantIds(selectedCategoryDefinition))
+        : null;
+
     const filtered = products.filter((p) => {
         const matchesSearch =
             !q ||
@@ -1261,7 +1274,11 @@ export default function AdminProducts() {
             (selectedCategory === HOME_CATEGORY_FILTER && featuredProductIds.includes(Number(p.id))) ||
             (
                 selectedCategory !== HOME_CATEGORY_FILTER &&
-                normalizeCategoryLabel(getDisplayCategoryName(p)) === normalizeCategoryLabel(selectedCategory)
+                (
+                    selectedCategoryIds
+                        ? selectedCategoryIds.has(getNormalizedCategoryId(p))
+                        : normalizeCategoryLabel(getDisplayCategoryName(p)) === normalizeCategoryLabel(selectedCategory)
+                )
             );
 
         const isActive = Boolean(p?.is_active);
