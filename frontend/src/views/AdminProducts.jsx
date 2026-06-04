@@ -412,6 +412,11 @@ const isParentCategoryId = (categoryId) => {
     return Boolean(category?.children?.length);
 };
 
+const parentCategoryNames = PERFUME_CATEGORY_DEFINITIONS
+    .filter((category) => category.children?.length > 0)
+    .map((category) => category.name)
+    .join(", ");
+
 // ----- Componente principal -----
 export default function AdminProducts() {
     const [products, setProducts] = useState([])
@@ -968,7 +973,7 @@ export default function AdminProducts() {
             const wantsFeatured = Boolean(form.show_on_home);
 
             if (isParentCategoryId(form.category_id)) {
-                alert("Debes seleccionar una subcategoría. Perfumes y Gafas son categorías generales.");
+                alert(`Debes seleccionar una subcategoría. ${parentCategoryNames || "La categoría seleccionada"} es una categoría general.`);
                 return;
             }
 

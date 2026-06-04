@@ -337,7 +337,7 @@ export default function Header() {
 
       >
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 py-3">
 
 
@@ -361,7 +361,7 @@ export default function Header() {
                 <img
                   src={headerLogo}
                   alt={storeConfig.storeName.trim()}
-                  className="mt-[-0px] lg:mt-[-0px] h-[55px] lg:h-[55px] object-contain transition-all duration-300"
+                  className="mt-[6px] lg:mt-2 h-[83px] lg:h-[80px] object-contain transition-all duration-300"
                 />
               </Link>
             </div>

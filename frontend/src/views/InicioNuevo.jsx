@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useLayoutEffect, useState } from "react";
+import React, { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Context } from "../js/store/appContext.jsx";
 import ProductCardPerfumes from "../components/ui/cards/ProductCardPerfumes.jsx";
 import HomeContact from "../components/home/HomeContact.jsx";
@@ -21,6 +22,39 @@ import rasasi from '../assets/rasasi.png'
 import ray from '../assets/raysi.jpg'
 
 const API = getApiUrl();
+
+const clientCarouselImages = [
+    { name: "Foto carrusel", baseNames: ["carru"] },
+    { name: "Foto carrusel 1", baseNames: ["carru1"] },
+    { name: "Foto carrusel 2", baseNames: ["carru2"] },
+    { name: "Foto carrusel 3", baseNames: ["carru3"] },
+    { name: "Foto carrusel 4", baseNames: ["carru4"] },
+    { name: "Foto carrusel 5", baseNames: ["carru5"] },
+];
+
+const getClientCarouselSrc = (baseName) => `/${baseName}.webp`;
+const carouselFallbackExtensions = ["jpeg", "jpg", "png", ""];
+
+const handleClientCarouselImageError = (event, baseNames) => {
+    const img = event.currentTarget;
+    const baseIndex = Number(img.dataset.baseIndex || 0);
+    const extensionIndex = Number(img.dataset.extensionIndex || 0);
+    const nextExtension = carouselFallbackExtensions[extensionIndex];
+    const nextBaseName = baseNames[baseIndex];
+
+    if (nextBaseName && nextExtension !== undefined) {
+        img.dataset.extensionIndex = String(extensionIndex + 1);
+        img.src = nextExtension ? `/${nextBaseName}.${nextExtension}` : `/${nextBaseName}`;
+        return;
+    }
+
+    const followingBaseName = baseNames[baseIndex + 1];
+    if (!followingBaseName) return;
+
+    img.dataset.baseIndex = String(baseIndex + 1);
+    img.dataset.extensionIndex = "1";
+    img.src = `/${followingBaseName}.jpeg`;
+};
 
 const cssValue = (value, fallback) =>
     value === undefined || value === null || value === "" ? fallback : value;
@@ -59,7 +93,9 @@ export default function InicioNuevo() {
     const { store, actions } = useContext(Context);
     const location = useLocation();
     const navigate = useNavigate();
+    const clientCarouselRef = useRef(null);
     const [homeFeaturedIds, setHomeFeaturedIds] = useState(null);
+    const [activeClientSlide, setActiveClientSlide] = useState(0);
     const heroImageDesktop = `/${storeConfig.media.heroImageDesktop || storeConfig.media.heroImage || ""}`;
     const heroImageMobile = `/${storeConfig.media.heroImageMobile || storeConfig.media.heroImageDesktop || storeConfig.media.heroImage || ""}`;
     const heroConfig = storeConfig.hero || {};
@@ -80,6 +116,46 @@ export default function InicioNuevo() {
             .catch(() => {
                 setHomeFeaturedIds([]);
             });
+    }, []);
+
+    const goToClientSlide = (index, behavior = "smooth") => {
+        const carousel = clientCarouselRef.current;
+        if (!carousel) return;
+
+        const boundedIndex = Math.max(0, Math.min(index, clientCarouselImages.length - 1));
+        const targetSlide = carousel.querySelectorAll("[data-client-slide]")[boundedIndex];
+
+        carousel.scrollTo({
+            left: targetSlide?.offsetLeft || boundedIndex * carousel.clientWidth,
+            behavior,
+        });
+
+        setActiveClientSlide(boundedIndex);
+    };
+
+    const scrollClientCarousel = (direction) => {
+        goToClientSlide(activeClientSlide + direction);
+    };
+
+    useEffect(() => {
+        const carousel = clientCarouselRef.current;
+        if (!carousel) return;
+
+        const updateActiveSlide = () => {
+            const slides = Array.from(carousel.querySelectorAll("[data-client-slide]"));
+            if (!slides.length) return;
+
+            const nearestIndex = slides.reduce((bestIndex, slide, index) => {
+                const bestDistance = Math.abs(slides[bestIndex].offsetLeft - carousel.scrollLeft);
+                const nextDistance = Math.abs(slide.offsetLeft - carousel.scrollLeft);
+                return nextDistance < bestDistance ? index : bestIndex;
+            }, 0);
+
+            setActiveClientSlide(Math.max(0, Math.min(nearestIndex, clientCarouselImages.length - 1)));
+        };
+
+        carousel.addEventListener("scroll", updateActiveSlide, { passive: true });
+        return () => carousel.removeEventListener("scroll", updateActiveSlide);
     }, []);
 
     const ADDRESS = storeConfig.business.address;
@@ -250,6 +326,7 @@ export default function InicioNuevo() {
                     )}
                 </div>
             </section>
+
             {/* 
             <div className="relative z-10 overflow-hidden whitespace-nowrap bg-gradient-to-r from-black via-[#0B0608] to-black py-3">
          
@@ -316,7 +393,7 @@ export default function InicioNuevo() {
                     </div>
                 )}
             </section>
-            <div className="flex justify-center mt-0 mb-1 lg:px-12 lg:py-12">
+            <div className="flex justify-center mt-0 mb-12 lg:px-12 lg:py-12">
                 <div
                     onClick={() => navigate(location.pathname.startsWith("/mayorista") ? "/mayorista/products" : "/products")}
                     className="
@@ -339,12 +416,114 @@ shadow-lg shadow-amber-500/20
                     Explorar todas las categorías
                 </div>
             </div>
+            <section className="bg-gray-50 px-4 sm:px-6 lg:px-8 pb-3 pt-8 lg:pb-10 lg:pt-12">
+                <div className="max-w-5xl mx-auto">
+                    <div className="relative client-carousel-frame overflow-hidden rounded-xl lg:overflow-visible lg:rounded-none lg:[clip-path:none]">
+                        <div
+                            ref={clientCarouselRef}
+                            className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth client-photo-carousel lg:rounded-none lg:[clip-path:none]"
+                            aria-label="Carrusel de fotos"
+                        >
+                            {clientCarouselImages.map((image) => (
+                                <article
+                                    key={image.baseNames[0]}
+                                    data-client-slide
+                                    className="relative isolate snap-center shrink-0 w-full h-[430px] sm:h-[560px] lg:h-[650px] flex items-center justify-center overflow-hidden lg:rounded-xl lg:bg-[#0B0608] lg:ring-1 lg:ring-black/5 lg:[clip-path:inset(0_round_0.75rem)]"
+                                >
+                                    <div className="hidden lg:block absolute inset-0 bg-[#0B0608]" />
+
+                                    <img
+                                        src={getClientCarouselSrc(image.baseNames[0])}
+                                        alt=""
+                                        aria-hidden="true"
+                                        onError={(event) => handleClientCarouselImageError(event, image.baseNames)}
+                                        className="hidden lg:block absolute -inset-8 h-[calc(100%+4rem)] w-[calc(100%+4rem)] object-cover blur-2xl opacity-35 saturate-75"
+                                        loading="lazy"
+                                    />
+
+                                    <img
+                                        src={getClientCarouselSrc(image.baseNames[0])}
+                                        alt={image.name}
+                                        onError={(event) => handleClientCarouselImageError(event, image.baseNames)}
+                                        className="relative z-10 h-full w-full object-contain client-carousel-main-image lg:rounded-md lg:[clip-path:none]"
+                                        loading="lazy"
+                                    />
+                                </article>
+                            ))}
+                        </div>
+
+                        <div className="absolute bottom-5 sm:bottom-6 lg:-bottom-10 left-0 right-0 flex items-center justify-center gap-1">
+                            {clientCarouselImages.map((image, index) => (
+                                <button
+                                    key={image.baseNames[0]}
+                                    type="button"
+                                    onClick={() => goToClientSlide(index)}
+                                    className={`p-0 rounded-full transition-all duration-300 ${activeClientSlide === index
+                                        ? "h-[1px] w-2.5 bg-white/70 lg:h-[3px] lg:w-3 lg:bg-[#0B0608]/60"
+                                        : "h-[1px] w-[2px] bg-white/35 hover:bg-white/60 lg:h-[3px] lg:w-[3px] lg:bg-[#0B0608]/25 lg:hover:bg-[#0B0608]/50"
+                                        }`}
+                                    aria-label={`Ver foto ${index + 1}`}
+                                    aria-current={activeClientSlide === index ? "true" : undefined}
+                                >
+                                    <span className="sr-only">Foto {index + 1}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="hidden lg:flex absolute inset-y-0 left-0 right-0 z-30 items-center justify-between px-4 pointer-events-none">
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    scrollClientCarousel(-1);
+                                }}
+                                disabled={activeClientSlide === 0}
+                                className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-white bg-white text-black shadow-xl transition hover:scale-105 hover:bg-white disabled:opacity-35 disabled:hover:scale-100"
+                                aria-label="Ver foto anterior"
+                            >
+                                <ArrowLeft className="block h-5 w-5 text-black" strokeWidth={2} aria-hidden="true" />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    scrollClientCarousel(1);
+                                }}
+                                disabled={activeClientSlide === clientCarouselImages.length - 1}
+                                className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-white bg-white text-black shadow-xl transition hover:scale-105 hover:bg-white disabled:opacity-35 disabled:hover:scale-100"
+                                aria-label="Ver foto siguiente"
+                            >
+                                <ArrowRight className="block h-5 w-5 text-black" strokeWidth={2} aria-hidden="true" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <style>{`
+    @media (max-width: 1023px) {
+      .client-carousel-main-image {
+        border-radius: 0 !important;
+      }
+    }
+
+    .client-photo-carousel {
+      scrollbar-width: none;
+    }
+
+    .client-photo-carousel::-webkit-scrollbar {
+      display: none;
+    }
+  `}</style>
+            </section>
             {/*  <section id="asesoria">
                 <Asesoria />
             </section> */}
+            {false && (
             <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" id='asesoria'>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-center">
-                    {/* Columna izquierda: texto */}
                     <div className="md:col-span-1 text-center md:text-left">
                         <span className="block text-sm tracking-[0.18em] font-semibold uppercase text-gray-500">
                             ¡Contactanos!
@@ -392,11 +571,8 @@ shadow-lg shadow-amber-500/20
                         </div>
                     </div>
 
-                    {/* Divider central (sólo desktop) */}
                     <div className="hidden md:block h-full w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent mx-auto" />
 
-                    {/* Columna derecha: mapa (oscuro por CSS) */}
-                    {/* Columna derecha: mapa (oscuro por CSS) */}
                     <div className="md:col-span-1">
                         <div className="rounded-xl overflow-hidden shadow-lg ring-1 ring-gray-200 bg-black">
                             <div className="aspect-video md:aspect-[4/3] map-dark">
@@ -421,16 +597,14 @@ shadow-lg shadow-amber-500/20
                     </div>
                 </div>
 
-                {/* Filtro para “estilo oscuro” del iframe (sin API key) */}
                 <style>{`
     .map-dark iframe {
-      /* Ajustá estos valores si querés más/menos contraste */
       filter: invert(90%) hue-rotate(180deg) saturate(0.7) brightness(0.85) contrast(1.05);
-      /* Para mejorar la suavidad en algunos navegadores */
       transform: translateZ(0);
     }
   `}</style>
             </section>
+            )}
             {storeConfig.features?.showBrandCarousel !== false && (
                 <section className="relative bg-white py-8 fade-in-section border-y border-gray-200">
                     <div className="relative z-10 overflow-hidden whitespace-nowrap mx-0 md:mx-[104px]">

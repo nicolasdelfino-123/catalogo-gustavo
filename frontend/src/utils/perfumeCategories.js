@@ -7,6 +7,7 @@ export const DEFAULT_CATEGORY_ID = 1;
 const PERFUME_CATEGORY_ID_DEFINITIONS = [
     { id: 1, fallbackName: "Masculinos", slug: "masculinos" },
     { id: 2, fallbackName: "Femeninos", slug: "femeninos" },
+    { id: 3, fallbackName: "Unisex", slug: "unisex" },
 ];
 
 const slugifyCategoryLabel = (value = "") =>
